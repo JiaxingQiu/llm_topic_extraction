@@ -1,4 +1,5 @@
 # Ignore a specific file
+data/answer_df_raw.csv
 
 # Ignore all files in a directory
 llama_data/*
