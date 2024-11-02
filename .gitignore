@@ -2,6 +2,7 @@
 
 # Ignore all files in a directory
 llama_data/*
+gpt_data/*
 
 # Ignore all files with a specific extension
 *.RData
