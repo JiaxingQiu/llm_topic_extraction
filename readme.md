@@ -1,12 +1,13 @@
 # data
 
 ### inputs
-- ./data/answer_df_raw.csv contains 77175 social media posts.
-- ./data/fea_df.csv contains topical features to be queries by LLM. 
+- "./data/answer_df_raw.csv" contains 77175 social media posts.
+- "./data/fea_df.csv" contains topical features to be queried by LLM. 
 
 ### outputs
-- llama extracted topics should be stored as ./llama_data/answer_df.csv 
-- GPT4 extracted topics should be stored as ./gpt_data/answer_df.csv
+- create subfolder "llama_data" and "gpt_data" locally.
+- llama extracted topics should be stored as "./llama_data/answer_df.csv"
+- GPT4 extracted topics should be stored as "./gpt_data/answer_df.csv"
 
 
 # script
