@@ -1,0 +1,8 @@
+# Ignore a specific file
+
+# Ignore all files in a directory
+llama_data/*
+
+# Ignore all files with a specific extension
+*.RData
+*.RDS
