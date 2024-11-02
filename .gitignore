@@ -4,6 +4,7 @@ data/answer_df_raw.csv
 # Ignore all files in a directory
 llama_data/*
 gpt_data/*
+tokens/*
 
 # Ignore all files with a specific extension
 *.RData
