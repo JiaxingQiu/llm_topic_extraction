@@ -1,7 +1,7 @@
 
 # 1. answer_df
 # run "~/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/data_clean_in_r_with_EOS.R" first
-df_llm <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/./script/llm/sm_eos.csv", stringsAsFactors = F)
+df_llm <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = F)
 
 answer_df <- df_llm[,c("sm_id", "text_w_eos")]
 
