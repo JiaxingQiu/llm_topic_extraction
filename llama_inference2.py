@@ -39,8 +39,8 @@ for name, param in model.named_parameters():
 
 import pandas as pd
 import numpy as np
-answer_df = pd.read_csv("./llama_data/answer_df_new.csv")
-query_df = pd.read_csv("./llama_data/query_df3.csv")
+answer_df = pd.read_csv("./llama_data/answer_df_part2.csv")
+query_df = pd.read_csv("./data/fea_df.csv")
 print(answer_df.shape)
 
 
@@ -63,10 +63,10 @@ def colorize_text(text):
 def format_prompt(text):
     question_content = "Does the paragraph mention any of the following topics:\n"
     for i in range(len(query_df)):
-        question_content += f"  ({i+1}) {query_df.topic[i]}: {query_df.description[i]}.\n"
+        question_content += f"  ({i+1}) {query_df.fea[i]}: {query_df.description[i]}.\n"
     answer_content = "Return answer in format:\n"
     for i in range(len(query_df)): 
-        answer_content += f"  ({i+1}) {query_df.topic[i]}: [yes/no], related phrases if any: \n"
+        answer_content += f"  ({i+1}) {query_df.fea[i]}: [yes/no], related phrases if any: \n"
     paragragh_content = f"Paragraph: '{text}' \n"
     user_message = question_content + answer_content + paragragh_content
     #print(user_message)
@@ -137,7 +137,7 @@ for k in range(1000000):
     batch_size = 10
 
     # Filter for rows where 'answer_string' is NaN
-    unanswered_df = answer_df[answer_df['answer_string3'].isna()]
+    unanswered_df = answer_df[answer_df['answer_string'].isna()]
 
     # Get the indices of these NaN entries in the original DataFrame
     indices_to_update = unanswered_df.index[:batch_size]
@@ -166,12 +166,12 @@ for k in range(1000000):
         if "Answer:" in response:
             answer = response.split("Answer:")[1]
             # Use the original index from indices_to_update_list
-            answer_df.loc[indices_to_update_list[i], 'answer_string3'] = answer
+            answer_df.loc[indices_to_update_list[i], 'answer_string'] = answer
         else:
             # Use the original index from indices_to_update_list
-            answer_df.loc[indices_to_update_list[i], 'answer_string3'] = "Answer not found"
+            answer_df.loc[indices_to_update_list[i], 'answer_string'] = "Answer not found"
 
 
     print(answer_df.loc[indices_to_update_list, :])
-    answer_df.to_csv('./llama_data/answer_df_new.csv', index=False)
+    answer_df.to_csv('./llama_data/answer_df_part2.csv', index=False)
 

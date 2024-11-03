@@ -10,7 +10,7 @@ if(!file.exists("./llama_data/answer_df_part2.csv")){
   answer_df_raw <- read.csv("./data/answer_df_raw.csv", stringsAsFactors = F)
   remain_sm <- setdiff(answer_df_raw$sm_id, answer_df_llama1$sm_id)
   remain_df <- answer_df_raw[which(answer_df_raw$sm_id %in% remain_sm),]
-  write.csv(remain_df,"./llama_data/answer_df_raw_part2.csv", row.names = F)
+  write.csv(remain_df,"./llama_data/answer_df_part2.csv", row.names = F)
   # run llama on answer_df_raw_part2.csv, using fea_df
   rm(answer_df_raw, remain_df)
 }else{
