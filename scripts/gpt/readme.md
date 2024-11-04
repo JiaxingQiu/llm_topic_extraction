@@ -9,3 +9,10 @@
 You should create a file named ```key.py``` in this directory. And the content should be ```openai_key = "{your openai api key}"```
 
 **Be sure that the ```key.py``` should not be uploaded to github to avoid leakage.**
+
+
+### current flow
+- under root dir
+- run ./scripts/gpt/preprocess.py
+- run ./scripts/gpt/split_file.py
+- run job.ipynb last chunk

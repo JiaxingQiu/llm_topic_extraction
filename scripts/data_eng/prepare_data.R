@@ -4,7 +4,14 @@
 df_llm <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = F)
 
 answer_df <- df_llm[,c("sm_id", "text_w_eos")]
-
+# answer_df1 <- answer_df[1:30000,]
+# answer_df2 <- answer_df[30001:nrow(answer_df),]
+# stopifnot(nrow(answer_df2) + nrow(answer_df1) == nrow(answer_df))
+# setdiff(union(answer_df2$sm_id, answer_df1$sm_id), answer_df$sm_id)
+# setdiff(answer_df$sm_id, union(answer_df2$sm_id, answer_df1$sm_id))
+# 
+# write.csv(answer_df1, "/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/answer_df_raw1.csv", row.names = F)
+# write.csv(answer_df2, "/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/answer_df_raw2.csv", row.names = F)
 write.csv(answer_df, "/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/answer_df_raw.csv", row.names = F)
 
 

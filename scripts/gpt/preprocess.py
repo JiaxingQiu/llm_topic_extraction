@@ -45,15 +45,16 @@ def main():
                     {"role": "user", "content": format_prompt(query_df, row["text_w_eos"])},
                 ],
                 "max_tokens": 2000, # Change this to the desired max tokens
+                "temperature": 0.1
             }
         }
         json_data.append(entry)
     
     # Save JSON data t
-    with open("batch_request_gpt4omini.jsonl", "w") as f:
+    with open("data/batch_request_gpt4omini.jsonl", "w") as f:
         for data in json_data:
             f.write(json.dumps(data) + "\n")
-    print("JSON file created as 'batch_request.jsonl'")
+    print("JSON file created as 'data/batch_request_gpt4omini.jsonl'")
 
 
 if __name__ == "__main__":

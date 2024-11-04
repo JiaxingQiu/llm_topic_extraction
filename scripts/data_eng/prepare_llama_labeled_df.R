@@ -1,7 +1,7 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 
 rm(list=ls())
-source("./scripts/func_label_topics.R")
+source("./scripts/data_eng/func_label_topics.R")
 fea_df <- read.csv("./data/fea_df.csv")
 
 # answer_df_part1.csv contain first part of llama query results
@@ -28,6 +28,7 @@ answer_df <- answer_df %>% select(sm_id, text_w_eos, answer_string) %>% as.data.
 labeled_df <- format_answer_df(answer_df, fea_df$fea)
 labeled_df <- labeled_df[complete.cases(labeled_df),]
 
+labeled_df[which(labeled_df$sm_id=="104a474"),]
 # # sanity check
 # text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
 # info_df <- text_df %>% select(sm_id, group, sr_name)

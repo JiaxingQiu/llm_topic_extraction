@@ -21,7 +21,7 @@ def fist_k_lines(input_file, k):
         f.writelines(lines[:k])
 
 if __name__ == "__main__":
-    input_file = "batch_request_gpt4omini.jsonl"
+    input_file = "data/batch_request_gpt4omini.jsonl"
     num_files = 80
 
     split_file(input_file, num_files)
