@@ -39,18 +39,18 @@ def main():
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": {
-                "model": "gpt-4o",
+                "model": "gpt-4o-mini", # Change this to the model you want to use
                 "messages": [
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": format_prompt(query_df, row["text_w_eos"])},
                 ],
-                "max_tokens": 4096
+                "max_tokens": 2000, # Change this to the desired max tokens
             }
         }
         json_data.append(entry)
     
     # Save JSON data t
-    with open("batch_request.jsonl", "w") as f:
+    with open("batch_request_gpt4omini.jsonl", "w") as f:
         for data in json_data:
             f.write(json.dumps(data) + "\n")
     print("JSON file created as 'batch_request.jsonl'")
