@@ -22,7 +22,7 @@ def fist_k_lines(input_file, k):
 
 if __name__ == "__main__":
     input_file = "batch_request_gpt4omini.jsonl"
-    num_files = 2
+    num_files = 80
 
     split_file(input_file, num_files)
     # fist_k_lines(input_file, 1000)
