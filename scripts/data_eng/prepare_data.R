@@ -14,6 +14,18 @@ answer_df <- df_llm[,c("sm_id", "text_w_eos")]
 # write.csv(answer_df2, "/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/answer_df_raw2.csv", row.names = F)
 write.csv(answer_df, "/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/answer_df_raw.csv", row.names = F)
 
+# 1.2 answer_df part 2 for llama 8b
+setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
+# answer_df_part1.csv contain first part of llama query results
+answer_df_llama1 <- read.csv("./llama_data/answer_df_part1.csv", stringsAsFactors = F)
+if(!file.exists("./llama_data/answer_df_part2.csv")){
+  answer_df_raw <- read.csv("./data/answer_df_raw.csv", stringsAsFactors = F)
+  remain_sm <- setdiff(answer_df_raw$sm_id, answer_df_llama1$sm_id)
+  remain_df <- answer_df_raw[which(answer_df_raw$sm_id %in% remain_sm),]
+  write.csv(remain_df,"./llama_data/answer_df_part2.csv", row.names = F)
+  # run llama on answer_df_raw_part2.csv, using fea_df
+  rm(answer_df_raw, remain_df)
+}
 
 
 # 2. fea_df

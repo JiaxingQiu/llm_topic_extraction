@@ -7,7 +7,6 @@ format_answer <- function(answer_string, query_topics) {
   answer_string <- gsub("\\[yes\\]", "yes", answer_string)
   answer_string <- gsub("\\[no\\]", "no", answer_string)
   
-  
   topics01 <- list()
   for (i in seq_along(query_topics)) {
     topics01[[query_topics[i]]] <- NA

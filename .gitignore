@@ -7,7 +7,8 @@ scripts/gpt/key.py
 # Ignore all files in a directory
 llama_data/*
 gpt_data/*
-
+human_data/*
+__pycache__/*
 
 # Ignore all files with a specific extension
 *.RData
