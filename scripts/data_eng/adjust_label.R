@@ -1,0 +1,127 @@
+setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
+rm(list = ls())
+
+get_score_df <- function(folder){
+  library(dplyr)
+  fea_df <- read.csv("./data/fea_df.csv")
+  labeled_df <- read.csv(paste0("./",folder,"/results_with_cos.csv"))
+  labeled_df <- labeled_df[,setdiff(colnames(labeled_df), "X")]
+  labeled_df <- labeled_df %>% arrange(sm_id)
+  scores_df <- readRDS(paste0("./",folder,"/cos_score.RDS"))
+  scores_df <- scores_df %>% arrange(sm_id)
+  
+  # cos_v <- as.numeric(unlist(scores_df[,setdiff(colnames(scores_df),"sm_id")]))
+  # cos_v <- cos_v[cos_v>-1]
+  # score_cut = median(cos_v)
+  
+  for(topic in fea_df$fea){
+    # scores_df[[topic]] <- (scores_df[[topic]] + labeled_df[[topic]])/2 + 0.5
+    # scores_df[[topic]] <- (scores_df[[topic]] - (-1))/2 # between 0-1
+    # scores_df[[topic]] <- (scores_df[[topic]] + labeled_df[[topic]])/2
+    # scores_df[[topic]] <- scores_df[[topic]]*labeled_df[[topic]]
+    
+    # cos_v <- scores_df[[topic]]
+    # cos_v <- cos_v[cos_v>-1]
+    # quantiles <- quantile(cos_v, probs = c(0.25, 0.5, 0.75))
+    # hist(cos_v, breaks=100)
+    # abline(v = quantiles[1], col = "blue", lwd = 2, lty = 2)  # 25th percentile
+    # abline(v = quantiles[2], col = "blue", lwd = 2, lty = 2)  # 50th percentile (median)
+    # abline(v = quantiles[3], col = "blue", lwd = 2, lty = 2)  # 75th percentile
+    score_cut <- 0 #quantile(cos_v, 0.5)
+    
+    scores_df[[topic]] <- ifelse(scores_df[[topic]]<score_cut, 0, scores_df[[topic]])
+    scores_df[[topic]] <- scores_df[[topic]]*labeled_df[[topic]]
+    
+  }
+  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  info_df <- text_df %>% select(sm_id, group, sr_name, url)
+  scores_df <- merge(scores_df, info_df)%>% arrange(sm_id)
+  
+  return(list(labeled_df = labeled_df, 
+              scores_df = scores_df ))
+}
+
+
+fea_df <- read.csv("./data/fea_df.csv")
+obj <- get_score_df("gpt_data")
+label_df_gpt4omini <- obj$labeled_df
+score_df_gpt4omini <- obj$scores_df
+obj <- get_score_df("llama_data")
+label_df_llama8b <- obj$labeled_df
+score_df_llama8b <- obj$scores_df
+
+
+# sanity check
+distribution_gpt4omini <- score_df_gpt4omini %>%
+  group_by(group) %>%
+  summarise(across(all_of(c(fea_df$fea)), ~ mean(.x, na.rm = TRUE)))
+distribution_llama8b <- score_df_llama8b %>%
+  group_by(group) %>%
+  summarise(across(all_of(c(fea_df$fea)), ~ mean(.x, na.rm = TRUE)))
+
+library(pheatmap)
+tmp1 <- distribution_gpt4omini
+tmp2 <- distribution_llama8b
+mat1 <- as.matrix(tmp1[, -1])
+rownames(mat1) <- tmp1$group
+pheatmap(mat1,  # Remove the group column, if it's the first column
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         legend_breaks = seq(-1,1,0.1),
+         main = "Occurrence rates by GPT 4o-mini")
+mat2 <- as.matrix(tmp2[, -1])
+rownames(mat2) <- tmp2$group
+pheatmap(mat2,  # Remove the group column, if it's the first column
+         cluster_rows = F,
+         cluster_cols = F,
+         legend_breaks = seq(-1,1,0.1),
+         main = "Occurrence rates by Llama 8b-instruct (need a second run)")
+
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+tmp1 <- distribution_gpt4omini %>% mutate(model = "GPT-4o-mini")
+tmp2 <- distribution_llama8b %>% mutate(model = "Llama 8b-instruct")
+combined_data <- bind_rows(tmp1, tmp2)
+long_data <- combined_data  %>%
+  pivot_longer(cols = -c(group, model), names_to = "category", values_to = "occurrence_rate")
+ggplot(long_data, aes(x = group, y = occurrence_rate, fill = model)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~category,ncol=4, scales = "free_x") + 
+  labs(y = "Occurrence Rate") +
+  theme_minimal() +
+  scale_fill_manual(values = c("GPT-4o-mini" = "skyblue", "Llama 8b-instruct" = "coral")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top")
+
+
+# ---- get the pearson correlation between two llms -----
+correlation_results <- list()
+correlation_results_raw <- list()
+for (topic in fea_df$fea) {
+  correlation <- cor(score_df_gpt4omini[[topic]], score_df_llama8b[[topic]], use = "complete.obs", method = "pearson")
+  correlation_raw <- cor(label_df_gpt4omini[[topic]], label_df_llama8b[[topic]], use = "complete.obs", method = "pearson")
+  correlation_results[[topic]] <- correlation
+  correlation_results_raw[[topic]] <- correlation_raw
+}
+correlation_df <- data.frame(correlation_adjusted_score = unlist(correlation_results), correlation_label = unlist(correlation_results_raw))
+print(correlation_df)
+
+all_score_gpt4 <- as.numeric(unlist(score_df_gpt4omini[,2:20]))
+all_score_llama <- as.numeric(unlist(score_df_llama8b[,2:20]))
+all_label_gpt4 <- as.numeric(unlist(label_df_gpt4omini[,4:22]))
+all_label_llama <- as.numeric(unlist(label_df_llama8b[,4:22]))
+correlation <- cor(all_score_gpt4, all_score_llama, use = "complete.obs", method = "pearson")
+correlation_raw <- cor(all_label_gpt4, all_label_llama, use = "complete.obs", method = "pearson")
+print(paste0("score corr = ", round(correlation,4),"  label corr = ", round(correlation_raw,4) ))
+
+
+plot(score_df_gpt4omini$calorie, score_df_llama8b$calorie)
+plot(jitter(label_df_gpt4omini$calorie), jitter(label_df_llama8b$calorie))
+plot(score_df_gpt4omini$bodyhate, score_df_llama8b$bodyhate)
+plot(all_score_gpt4, all_score_llama)
+
+
+
+

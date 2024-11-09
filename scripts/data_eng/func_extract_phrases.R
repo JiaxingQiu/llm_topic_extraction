@@ -65,12 +65,16 @@ func_extract_phrases <- function(answer_string, query_topics, raw_text){
 
 
 # Function to format the answer dataframe using apply
-get_result_list <- function(answer_df, query_topics) {
+get_result_df <- function(answer_df, query_topics) {
   
   # make sure "text_w_eos", "answer_string", "sm_id" are in answer_df
   stopifnot("text_w_eos" %in% colnames(answer_df) )
   stopifnot("answer_string" %in% colnames(answer_df) )
   stopifnot("sm_id" %in% colnames(answer_df) )
+  
+  answer_df[query_topics] <- NA
+  answer_df[paste0(query_topics,"_phrases")] <- NA
+  
   
   # Helper function to process each row
   process_row <- function(sm_id) {
@@ -79,20 +83,28 @@ get_result_list <- function(answer_df, query_topics) {
     answer_string <- answer_df[answer_df$sm_id==sm_id,"answer_string"]
     res_list[[sm_id]] <- func_extract_phrases(answer_string, query_topics, raw_text )
     
-    # # Return a named list where topic columns are set to 1 or 0 based on topics01
-    # sapply(query_topics, function(topic) {return(formatted[[topic]]$label)})
     
-    return(res_list)
+    # return(res_list)
+    # Return a named list where topic columns are set to 1 or 0 based on topics01
+    labels = sapply(query_topics, function(topic) {return(res_list[[sm_id]][[topic]]$label)})
+    phrases = sapply(query_topics, function(topic) {return(paste0(res_list[[sm_id]][[topic]]$phrases,collapse = "; ") )})
+    names(phrases) <- paste0(names(phrases),"_phrases")
+    res <- c(labels, phrases)
+    return(res)
   }
   
   # Apply the processing function to each row in answer_string and bind the result
+  # library(parallel)
+  # result_lists <- t(mclapply(answer_df$sm_id, process_row, mc.cores = detectCores() - 2))
+  # # concate lists into one
+  # combined_result <- do.call(c, result_lists)
+  
   library(parallel)
-  result_lists <- t(mclapply(answer_df$sm_id, process_row, mc.cores = detectCores() - 2))
+  topic_res <- t(mclapply(answer_df$sm_id, process_row, mc.cores = detectCores() - 2))
+  # Bind the result to the original answer_df
+  answer_df[c(query_topics,paste0(query_topics,"_phrases"))] <- do.call(rbind, topic_res)
   
-  # concate lists into one
-  combined_result <- do.call(c, result_lists)
-  
-  return(combined_result)
+  return(answer_df)
 }
 
 
