@@ -1,19 +1,19 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 rm(list = ls())
+source("./scripts/data_eng/func_x_transform.R")
 
-get_score_df <- function(folder){
-  library(dplyr)
-  fea_df <- read.csv("./data/fea_df.csv")
-  labeled_df <- read.csv(paste0("./",folder,"/results_with_cos.csv"))
+get_score_df <- function(folder, mdl_name = "stella_en_400M_v5"){
+  labeled_df <- read.csv(paste0("./",folder,"/results_with_cos_",mdl_name,".csv"))
   labeled_df <- labeled_df[,setdiff(colnames(labeled_df), "X")]
   labeled_df <- labeled_df %>% arrange(sm_id)
-  scores_df <- readRDS(paste0("./",folder,"/cos_score.RDS"))
+  scores_df <- readRDS(paste0("./",folder,"/cos_score_",mdl_name,".RDS"))
   scores_df <- scores_df %>% arrange(sm_id)
   
   # cos_v <- as.numeric(unlist(scores_df[,setdiff(colnames(scores_df),"sm_id")]))
   # cos_v <- cos_v[cos_v>-1]
   # score_cut = median(cos_v)
   
+  par(mfrow=c(4,5))
   for(topic in fea_df$fea){
     # scores_df[[topic]] <- (scores_df[[topic]] + labeled_df[[topic]])/2 + 0.5
     # scores_df[[topic]] <- (scores_df[[topic]] - (-1))/2 # between 0-1
@@ -23,16 +23,34 @@ get_score_df <- function(folder){
     # cos_v <- scores_df[[topic]]
     # cos_v <- cos_v[cos_v>-1]
     # quantiles <- quantile(cos_v, probs = c(0.25, 0.5, 0.75))
-    # hist(cos_v, breaks=100)
+    # hist(cos_v, breaks=100, main = topic)
     # abline(v = quantiles[1], col = "blue", lwd = 2, lty = 2)  # 25th percentile
     # abline(v = quantiles[2], col = "blue", lwd = 2, lty = 2)  # 50th percentile (median)
     # abline(v = quantiles[3], col = "blue", lwd = 2, lty = 2)  # 75th percentile
-    score_cut <- 0 #quantile(cos_v, 0.5)
+    # score_cut <- quantile( scores_df[[topic]][which(scores_df[[topic]]>0)], 0) #0
+    # scores_df[[topic]] <- ifelse(scores_df[[topic]]<score_cut, score_cut, scores_df[[topic]]) #0
     
-    scores_df[[topic]] <- ifelse(scores_df[[topic]]<score_cut, 0, scores_df[[topic]])
+    
+    # # recalibrate >0 scores_df[[topic]] between 0 - 1
+    # a0 <- which(scores_df[[topic]]>0)
+    # be0 <- which(scores_df[[topic]]<=0)
+    # print(min(scores_df[[topic]][a0],na.rm=T))
+    # scores_df[[topic]][a0] <- (scores_df[[topic]][a0] - min(scores_df[[topic]][a0],na.rm=T) ) #/ (max(scores_df[[topic]][a0],na.rm=T) - min(scores_df[[topic]][a0],na.rm=T))
+    # scores_df[[topic]][be0] <- 0
+    
+    # shift a cutoff at 0, then zero out <0
+    cutoff <- quantile(scores_df[[topic]][which(scores_df[[topic]]>0)],0)
+    a0 <- which(scores_df[[topic]]>=cutoff)
+    be0 <- which(scores_df[[topic]]<=cutoff)
+    print(min(scores_df[[topic]][a0],na.rm=T))
+    scores_df[[topic]][a0] <- (scores_df[[topic]][a0] - min(scores_df[[topic]][a0],na.rm=T) ) / (max(scores_df[[topic]][a0],na.rm=T) - min(scores_df[[topic]][a0],na.rm=T))
+    scores_df[[topic]][be0] <- 0
+    
+    
     scores_df[[topic]] <- scores_df[[topic]]*labeled_df[[topic]]
-    
   }
+  par(mfrow=c(1,1))
+  
   text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
   info_df <- text_df %>% select(sm_id, group, sr_name, url)
   scores_df <- merge(scores_df, info_df)%>% arrange(sm_id)
@@ -42,11 +60,16 @@ get_score_df <- function(folder){
 }
 
 
+mdl_name = "stella_en_1.5B_v5"
+# mdl_name = "stella_en_400M_v5"
+# mdl_name = "all-mpnet-base-v2"
+
 fea_df <- read.csv("./data/fea_df.csv")
-obj <- get_score_df("gpt_data")
+# fea_df <- fea_df[which(!fea_df$fea%in%c("nosocialeat", "thinspo", "fearcarb")),]
+obj <- get_score_df("gpt_data", mdl_name)
 label_df_gpt4omini <- obj$labeled_df
 score_df_gpt4omini <- obj$scores_df
-obj <- get_score_df("llama_data")
+obj <- get_score_df("llama_data", mdl_name)
 label_df_llama8b <- obj$labeled_df
 score_df_llama8b <- obj$scores_df
 
@@ -97,16 +120,45 @@ ggplot(long_data, aes(x = group, y = occurrence_rate, fill = model)) +
 
 
 # ---- get the pearson correlation between two llms -----
+library(pROC)
+library(PRROC)
+
 correlation_results <- list()
 correlation_results_raw <- list()
+auroc <- list()
+auroc_raw <- list()
+auprc <- list()
+auprc_raw <- list()
 for (topic in fea_df$fea) {
   correlation <- cor(score_df_gpt4omini[[topic]], score_df_llama8b[[topic]], use = "complete.obs", method = "pearson")
   correlation_raw <- cor(label_df_gpt4omini[[topic]], label_df_llama8b[[topic]], use = "complete.obs", method = "pearson")
   correlation_results[[topic]] <- correlation
   correlation_results_raw[[topic]] <- correlation_raw
+  
+  
+  
+  mdl_df <- data.frame(all_label_gpt4 = label_df_gpt4omini[[topic]],
+                       all_label_llama = label_df_llama8b[[topic]],
+                       all_score_gpt4 = score_df_gpt4omini[[topic]],
+                       all_score_llama = score_df_llama8b[[topic]])
+  mdl_df <- mdl_df[complete.cases(mdl_df),]
+  mdl_score <- glm(all_label_gpt4 ~ all_score_llama, data=mdl_df, family = binomial(link = "logit"))
+  predicted_probs <- predict(mdl_score, type = "response")
+  auroc[[topic]] <- round(auc(roc(mdl_df$all_label_gpt4, predicted_probs)),6)
+  pr_curve <- pr.curve(scores.class0 = predicted_probs, weights.class0 = mdl_df$all_label_gpt4 == 1, curve = TRUE)
+  auprc[[topic]] <- pr_curve$auc.integral
+  mdl_label <- glm(all_label_gpt4 ~ as.factor(all_label_llama), data=mdl_df, family = binomial(link = "logit"))
+  predicted_probs <- predict(mdl_label, type = "response")
+  auroc_raw[[topic]] <- round(auc(roc(mdl_df$all_label_gpt4, predicted_probs)),6)
+  pr_curve <- pr.curve(scores.class0 = predicted_probs, weights.class0 = mdl_df$all_label_gpt4 == 1, curve = TRUE)
+  auprc_raw[[topic]] <- pr_curve$auc.integral
+  
 }
-correlation_df <- data.frame(correlation_adjusted_score = unlist(correlation_results), correlation_label = unlist(correlation_results_raw))
-print(correlation_df)
+adjust_df <- data.frame(correlation_score = unlist(correlation_results), 
+                        correlation_label = unlist(correlation_results_raw),
+                        auprc_score = unlist(auprc), 
+                        auprc_label = unlist(auprc_raw))
+print(adjust_df)
 
 all_score_gpt4 <- as.numeric(unlist(score_df_gpt4omini[,2:20]))
 all_score_llama <- as.numeric(unlist(score_df_llama8b[,2:20]))
@@ -117,11 +169,40 @@ correlation_raw <- cor(all_label_gpt4, all_label_llama, use = "complete.obs", me
 print(paste0("score corr = ", round(correlation,4),"  label corr = ", round(correlation_raw,4) ))
 
 
-plot(score_df_gpt4omini$calorie, score_df_llama8b$calorie)
-plot(jitter(label_df_gpt4omini$calorie), jitter(label_df_llama8b$calorie))
+
+par(mfrow=c(2,2))
+plot(jitter(label_df_gpt4omini$bodyhate), jitter(label_df_llama8b$bodyhate))
 plot(score_df_gpt4omini$bodyhate, score_df_llama8b$bodyhate)
-plot(all_score_gpt4, all_score_llama)
+# plot(all_score_gpt4, all_score_llama)
 
 
-
-
+# # ----- use score of llama to predict label of gpt -----
+# # topic = "fearfood"
+# # all_score_gpt4 <- as.numeric(unlist(score_df_gpt4omini[,topic]))
+# # all_score_llama <- as.numeric(unlist(score_df_llama8b[,topic]))
+# # all_label_gpt4 <- as.numeric(unlist(label_df_gpt4omini[,topic]))
+# # all_label_llama <- as.numeric(unlist(label_df_llama8b[,topic]))
+# 
+# library(pROC)
+# library(PRROC)
+# 
+# mdl_df <- data.frame(all_label_gpt4 = all_label_gpt4,
+#                      all_label_llama = all_label_llama,
+#                      all_score_gpt4 = all_score_gpt4,
+#                      all_score_llama = all_score_llama)
+# mdl_df <- mdl_df[complete.cases(mdl_df),]
+# # Fit the logistic regression model
+# mdl_score <- glm(all_label_gpt4 ~ all_score_llama, data=mdl_df, family = binomial(link = "logit"))
+# predicted_probs <- predict(mdl_score, type = "response")
+# roc_curve <- roc(mdl_df$all_label_gpt4, predicted_probs)
+# plot(roc_curve, main = paste("adjusted AUROC:", round(auc(roc_curve),6) ))
+# # pr_curve <- pr.curve(scores.class0 = predicted_probs, weights.class0 = all_label_gpt4 == 1, curve = TRUE)
+# # plot(pr_curve)
+# 
+# # Fit the logistic regression model
+# mdl_label <- glm(all_label_gpt4 ~ as.factor(all_label_llama), data=mdl_df, family = binomial(link = "logit"))
+# predicted_probs <- predict(mdl_label, type = "response")
+# roc_curve <- roc(mdl_df$all_label_gpt4, predicted_probs)
+# plot(roc_curve, main = paste("adjusted AUROC:", round(auc(roc_curve),6) ))
+# # pr_curve <- pr.curve(scores.class0 = predicted_probs, weights.class0 = all_label_gpt4 == 1, curve = TRUE)
+# # plot(pr_curve)

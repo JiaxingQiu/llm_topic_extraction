@@ -2,13 +2,16 @@
 data/answer_df_raw.csv
 scripts/llama/tokens.txt
 scripts/gpt/key.py
+scripts/gpt4o/key.py
 
 
 # Ignore all files in a directory
 llama_data/*
 gpt_data/*
+gpt4o_data/*
 human_data/*
 __pycache__/*
+
 
 # Ignore all files with a specific extension
 *.RData
