@@ -10,6 +10,7 @@ llama_data/*
 gpt_data/*
 gpt4o_data/*
 human_data/*
+qwen_data/*
 __pycache__/*
 
 

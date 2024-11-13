@@ -31,7 +31,7 @@ get_cos_score <- function(topic, sm_id) {
 
 
 
-for(folder in c("gpt_data", "llama_data")){
+for(folder in c("gpt_data", "gpt4o_data", "llama_data")){
   
   cos_score_path <- paste0("./",folder,"/cos_score_",mdl_name,".RDS")
   
