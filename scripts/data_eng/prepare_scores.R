@@ -1,8 +1,8 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 
-mdl_name = "stella_en_1.5B_v5"
+# mdl_name = "stella_en_1.5B_v5"
 # mdl_name = "stella_en_400M_v5"
-# mdl_name = "all-mpnet-base-v2"
+mdl_name = "all-mpnet-base-v2"
 
 # topic = "feargain"#"bodyhate"
 # sm_id = "1003i3b"
@@ -31,7 +31,13 @@ get_cos_score <- function(topic, sm_id) {
 
 
 
-for(folder in c("gpt_data", "gpt4o_data", "llama_data")){
+for(folder in c("gpt_data", 
+                "gpt4o_data",
+                "llama_data",
+                "qwen_data",
+                "vicuna13b_data",
+                "vicuna7b_data",
+                "mistral_data")){
   
   cos_score_path <- paste0("./",folder,"/cos_score_",mdl_name,".RDS")
   

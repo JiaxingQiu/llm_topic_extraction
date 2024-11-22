@@ -6,6 +6,7 @@ adjust_label_by_agreement <- function(label_df,
   library(pROC)
   library(PRROC)
   library(MLmetrics)
+  label_df_adjust <- label_df
   
   auprc <- list()
   f1_score <- list()
@@ -43,9 +44,10 @@ adjust_label_by_agreement <- function(label_df,
       print(p)
     }
     f1_score[[topic]] <- f1_scores[optimal_index]
-    label_df[which(score_df[[topic]]<optimal_cutoff),topic] <- 0 # only remove false positives
+    label_df_adjust[,topic] <- 0
+    label_df_adjust[which(score_df[[topic]]>=optimal_cutoff|label_df[[topic]]==1),topic] <- 1 # only remove false positives
   }
   
-  return(label_df)
+  return(label_df_adjust)
   
 }

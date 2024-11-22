@@ -5,15 +5,13 @@ library(dplyr)
 library(parallel)
 library(ggplot2)
 library(ggpubr)
-source("./scripts/data_eng/func_plot_distribution.R")
-source("./scripts/data_eng/func_get_score_df.R")
-source("./scripts/data_eng/func_eval_llm.R")
-source("./scripts/data_eng/func_get_label_df_agree.R")
-source("./scripts/data_eng/func_adjust_label_by_agreement.R")
+
+path = paste0("./scripts/data_eng/utils")
+flst = list.files(path)
+sapply(c(paste(path,flst,sep="/")), source, .GlobalEnv)
 
 # prepare label_df, score_df
 fea_df <- read.csv("./data/fea_df.csv")
-
 
 # small models and agreements
 label_df_ls <- get_label_agreed(llm_ls = c("gpt_data", "llama_data"))

@@ -7,8 +7,17 @@ library(stringr)
 # query_topics = fea_df$fea
 func_extract_phrases <- function(answer_string, query_topics, raw_text){
   
+  answer_string <- tolower(answer_string)
+  answer_string <- gsub("\\*", "", answer_string) # diverging format in vicuna
+  answer_string <- gsub("yes\\/no", "no", answer_string)
   answer_string <- gsub("\\[yes\\]", "yes", answer_string)
   answer_string <- gsub("\\[no\\]", "no", answer_string)
+  answer_string <- gsub("\\[not mentioned\\]", "no", answer_string)
+  answer_string <- gsub("\\[not mention\\]", "no", answer_string)
+  answer_string <- gsub("\\[", "", answer_string)
+  answer_string <- gsub("\\]", "", answer_string)
+  answer_string <- gsub("not mentioned", "no", answer_string)
+  answer_string <- gsub("not mention", "no", answer_string)
   answer_string <- gsub("Total time: \\d+(.*?)\\d+ sec.", "", answer_string)
   answer_string <- gsub("\\n ", "\\\n", answer_string)
   answer_string <- paste0(answer_string, "\n") # add a \n
@@ -50,8 +59,25 @@ func_extract_phrases <- function(answer_string, query_topics, raw_text){
         split_phrases <- Filter(nzchar, trimws(split_phrases))
         # to lower case 
         split_phrases <- unlist(lapply(split_phrases, function(phrase) tolower(phrase)))
-        # for each element, check whether the string appears in the raw_text
-        matched_phrases <- sapply(split_phrases, function(phrase) grepl(phrase, raw_text))
+        
+        # lemmatize both reference text and phrases
+        library(textstem)
+        lemma_phrases <- sapply(split_phrases, function(phrase) lemmatize_strings(phrase))
+        lemma_text <- lemmatize_strings(raw_text)
+        # # for each element, check whether the string appears in the raw_text
+        # matched_phrases <- sapply(split_phrases, function(phrase) grepl(phrase, raw_text))
+        # matched_phrases <- sapply(lemma_phrases, function(phrase) grepl(phrase, lemma_text))
+        # change grepl in this code into a function: if more than half of the terms in phrase agree with lemma_text, yes
+        matched_phrases <- sapply(lemma_phrases, function(phrase) {
+          # Split the phrase into individual terms
+          terms <- unlist(strsplit(phrase, "\\s+"))
+          
+          # Count how many terms match in lemma_text
+          match_count <- sum(sapply(terms, function(term) grepl(term, lemma_text)))
+          
+          # Check if more than half of the terms agree
+          match_count > (length(terms) / 2)
+        })
         
         res[[topic]][['phrases']] <- split_phrases[matched_phrases]
       }

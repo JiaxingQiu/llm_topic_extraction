@@ -1,9 +1,12 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 rm(list = ls())
-source("./scripts/data_eng/func_x_transform.R")
-source("./scripts/data_eng/func_get_score_df.R")
-source("./scripts/data_eng/func_plot_distribution.R")
+
 library(dplyr)
+path = paste0("./scripts/data_eng/utils")
+flst = list.files(path)
+sapply(c(paste(path,flst,sep="/")), source, .GlobalEnv)
+
+
 
 mdl_name = "stella_en_1.5B_v5"
 # mdl_name = "stella_en_400M_v5"

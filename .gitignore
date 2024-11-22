@@ -6,11 +6,18 @@ scripts/gpt4o/key.py
 
 
 # Ignore all files in a directory
+data/*
+data2/*
 llama_data/*
 gpt_data/*
 gpt4o_data/*
 human_data/*
 qwen_data/*
+mistral_data/*
+vicuna7b_data/*
+vicuna13b_data/*
+res/*
+
 __pycache__/*
 
 

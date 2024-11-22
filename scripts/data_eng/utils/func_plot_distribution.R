@@ -1,7 +1,72 @@
-plot_distribution <- function(score_df_gpt4omini,
+# 
+# label_df_ls = list(labeled_df_gpt4omini,
+#                    labeled_df_llama8b,
+#                    labeled_df_gpt4o,
+#                    labeled_df_qwen)
+# llm_name_ls = list("GPT4o-mini",
+#                    "Llama8b",
+#                    "GPT4o",
+#                    "Qwen7b")
+plot_distribution <- function(label_df_ls, llm_name_ls, ret=F){
+  library(pheatmap)
+  library(gridExtra)
+  library(ggplot2)
+  library(tidyr)
+  library(dplyr)
+  library(grid)
+  
+  # fea_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction/data/fea_df.csv")
+  
+  names(label_df_ls) <- llm_name_ls
+  distribution_ls <- list()
+  pheat_ls <- list()
+  for(llm_name in names(label_df_ls) ){
+    distribution_ls[[llm_name]] <- label_df_ls[[llm_name]] %>%
+      group_by(group) %>%
+      summarise(across(all_of(c(fea_df$fea)), ~ mean(.x, na.rm = TRUE)))
+    mat <- as.matrix(distribution_ls[[llm_name]][, -1])
+    rownames(mat) <- distribution_ls[[llm_name]]$group
+    pheat_ls[[llm_name]] <- pheatmap(mat,  
+                                     cluster_rows = FALSE,
+                                     cluster_cols = FALSE,
+                                     legend_breaks = seq(-1,1,0.1),
+                                     fontsize=7.5,
+                                     angle_col = "45",
+                                     main = llm_name)[[4]]
+    distribution_ls[[llm_name]]  <- distribution_ls[[llm_name]] %>% mutate(model = llm_name)
+  }
+  # convert to a plot object grid.arrange(grobs=pheat_ls, ncol = 1)
+  p_heat <- arrangeGrob(grobs = pheat_ls, nrow = 4)
+  grid.arrange(p_heat)
+  
+  
+  combined_data <- do.call(bind_rows, distribution_ls)
+  long_data <- combined_data  %>% 
+    pivot_longer(cols = -c(group, model), names_to = "category", values_to = "occurrence_rate")
+  p_hist <- ggplot(long_data, aes(x = group, y = occurrence_rate, fill = model)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_wrap(~category, ncol=4, scales = "free_x") + 
+    labs(y = "Occurrence Rate") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+  print(p_hist)
+  
+  
+  if(ret){
+    return(list(p_heat = p_heat,
+                p_hist = p_hist))
+  }
+  
+}
+ 
+
+
+
+plot_distribution_old <- function(score_df_gpt4omini, 
                               score_df_llama8b,
                               score_df_gpt4o,
-                              label_df_agreed = NULL){
+                              label_df_agreed=NULL){
   distribution_gpt4omini <- score_df_gpt4omini %>%
     group_by(group) %>%
     summarise(across(all_of(c(fea_df$fea)), ~ mean(.x, na.rm = TRUE)))

@@ -6,36 +6,38 @@ rm(list=ls())
 
 library(dplyr)
 library(parallel)
-source("./scripts/data_eng/func_label_topics.R")
-source("./scripts/data_eng/func_extract_phrases.R")
-source("./scripts/data_eng/func_plot_distribution.R")
+
+
+path = paste0("./scripts/data_eng/utils")
+flst = list.files(path)
+sapply(c(paste(path,flst,sep="/")), source, .GlobalEnv)
 fea_df <- read.csv("./data/fea_df.csv")
 
 
 
 # ------ 0. human --------
 if(!file.exists("./human_data/results.csv")){
-  # loop through all csv files under "./gpt_data" folder
-  folder_path <- "./human_data/"
-  
-  label1 <- read.csv(paste0(folder_path,"sampled_posts_joy.csv"))
-  label2 <- read.csv(paste0(folder_path,"sampled_posts_sophia.csv"))
-  
-  label1 <- label1[,c("sm_id", "answer_string")]
-  label2 <- label1[,c("sm_id", "answer_string")]
-  
-  csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
-  
-  csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
-  answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
-  answer_df$answer_string <- answer_df$responses
-  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
-  answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
-  answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
-  labeled_df_gpt4omini <- get_result_df(answer_df, fea_df$fea)
-  write.csv(labeled_df_gpt4omini, "./gpt_data/results.csv", row.names = F)
+  # # loop through all csv files under "./gpt_data" folder
+  # folder_path <- "./human_data/"
+  # 
+  # label1 <- read.csv(paste0(folder_path,"sampled_posts_joy.csv"))
+  # label2 <- read.csv(paste0(folder_path,"sampled_posts_sophia.csv"))
+  # 
+  # label1 <- label1[,c("sm_id", "answer_string")]
+  # label2 <- label1[,c("sm_id", "answer_string")]
+  # 
+  # csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
+  # 
+  # csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
+  # answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
+  # answer_df$answer_string <- answer_df$responses
+  # text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  # answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
+  # answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
+  # labeled_df_gpt4omini <- get_result_df(answer_df, fea_df$fea)
+  # write.csv(labeled_df_gpt4omini, "./gpt_data/results.csv", row.names = F)
 }else{
-  labeled_df_gpt4omini <- read.csv("./gpt_data/results.csv", stringsAsFactors = F)
+  # labeled_df_gpt4omini <- read.csv("./gpt_data/results.csv", stringsAsFactors = F)
 }
 
 
@@ -44,7 +46,8 @@ if(!file.exists("./human_data/results.csv")){
 if(!file.exists("./gpt_data/results.csv")){
   # loop through all csv files under "./gpt_data" folder
   folder_path <- "./gpt_data"
-  csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
+  csv_files <- list.files(path = folder_path, pattern = "output[0-9]+\\.csv" , full.names = TRUE) #"*.csv"
+  stopifnot(length(csv_files)==80)
   answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
   answer_df$answer_string <- answer_df$responses
   text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
@@ -90,7 +93,8 @@ if(!file.exists("./llama_data/results.csv")){
 if(!file.exists("./gpt4o_data/results.csv")){
   # loop through all csv files under "./gpt4o_data" folder
   folder_path <- "./gpt4o_data"
-  csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
+  csv_files <- list.files(path = folder_path, pattern = "output[0-9]+\\.csv", full.names = TRUE)
+  stopifnot(length(csv_files)==11)
   answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
   answer_df$answer_string <- answer_df$responses
   text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
@@ -103,23 +107,108 @@ if(!file.exists("./gpt4o_data/results.csv")){
 }
 
 
+# ------ 4. Qwen --------
+if(!file.exists("./qwen_data/results.csv")){
+  # loop through all csv files under "./gpt4o_data" folder
+  folder_path <- "./qwen_data"
+  csv_files <- list.files(path = folder_path, pattern = "answer_df_part[0-9]+\\.csv", full.names = TRUE)
+  answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
+  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
+  answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
+  labeled_df_qwen <- get_result_df(answer_df, fea_df$fea)
+  write.csv(labeled_df_qwen, "./qwen_data/results.csv", row.names = F)
+}else{
+  labeled_df_qwen <- read.csv("./qwen_data/results.csv", stringsAsFactors = F)
+}
+
+
+# ------ 5. Vicuna13b --------
+if(!file.exists("./vicuna13b_data/results.csv")){
+  # loop through all csv files under "./gpt4o_data" folder
+  folder_path <- "./vicuna13b_data"
+  csv_files <- list.files(path = folder_path, pattern = "answer_df_part[0-9]+\\.csv", full.names = TRUE)
+  answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
+  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
+  answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
+  labeled_df_vicuna13b <- get_result_df(answer_df, fea_df$fea)
+  write.csv(labeled_df_vicuna13b, "./vicuna13b_data/results.csv", row.names = F)
+}else{
+  labeled_df_vicuna13b <- read.csv("./vicuna13b_data/results.csv", stringsAsFactors = F)
+}
+
+# ------ 6. Vicuna7b --------
+if(!file.exists("./vicuna7b_data/results.csv")){
+  # loop through all csv files under "./gpt4o_data" folder
+  folder_path <- "./vicuna7b_data"
+  csv_files <- list.files(path = folder_path, pattern = "answer_df_part[0-9]+\\.csv", full.names = TRUE)
+  answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
+  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
+  answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
+  labeled_df_vicuna7b <- get_result_df(answer_df, fea_df$fea)
+  write.csv(labeled_df_vicuna7b, "./vicuna7b_data/results.csv", row.names = F)
+}else{
+  labeled_df_vicuna7b <- read.csv("./vicuna7b_data/results.csv", stringsAsFactors = F)
+}
+
+
+# ------ 7. mistral7b --------
+if(!file.exists("./mistral_data/results.csv")){
+  # loop through all csv files under "./gpt4o_data" folder
+  folder_path <- "./mistral_data"
+  csv_files <- list.files(path = folder_path, pattern = "answer_df_part[0-9]+\\.csv", full.names = TRUE)
+  answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
+  text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
+  answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
+  answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
+  labeled_df_mistral <- get_result_df(answer_df, fea_df$fea)
+  write.csv(labeled_df_mistral, "./mistral_data/results.csv", row.names = F)
+}else{
+  labeled_df_mistral <- read.csv("./mistral_data/results.csv", stringsAsFactors = F)
+}
 
 
 
-# ------ 3. viz distribution ------
+# ------ viz distribution ------
 
 # additional info
 text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
 info_df <- text_df %>% select(sm_id, group, sr_name, url)
 labeled_df_gpt4o <- merge(labeled_df_gpt4o, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_gpt4o[is.na(labeled_df_gpt4o)] <- 0
 labeled_df_gpt4omini <- merge(labeled_df_gpt4omini, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_gpt4omini[is.na(labeled_df_gpt4omini)] <- 0
 labeled_df_llama8b <- merge(labeled_df_llama8b, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_llama8b[is.na(labeled_df_llama8b)] <- 0
+labeled_df_qwen <- merge(labeled_df_qwen, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_qwen[is.na(labeled_df_qwen)] <- 0
+labeled_df_vicuna13b <- merge(labeled_df_vicuna13b, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_vicuna13b[is.na(labeled_df_vicuna13b)] <- 0
+labeled_df_vicuna7b <- merge(labeled_df_vicuna7b, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_vicuna7b[is.na(labeled_df_vicuna7b)] <- 0
+labeled_df_mistral <- merge(labeled_df_mistral, info_df, by = "sm_id", all.x = TRUE)
+labeled_df_mistral[is.na(labeled_df_mistral)] <- 0
 rm(text_df)
 
+
 # sanity check
-plot_distribution(labeled_df_gpt4omini,
-                  labeled_df_llama8b,
-                  labeled_df_gpt4o)
+label_df_ls = list(labeled_df_gpt4o,
+                   labeled_df_gpt4omini,
+                   labeled_df_llama8b,
+                   labeled_df_qwen,
+                   labeled_df_vicuna13b,
+                   labeled_df_vicuna7b,
+                   labeled_df_mistral)
+llm_name_ls = list("GPT4o",
+                   "GPT4o-mini",
+                   "Llama8b",
+                   "Qwen7b",
+                   "Vicuna13b",
+                   "Vicuna7b",
+                   "Mistral7b")
+plot_distribution(label_df_ls, llm_name_ls)
 
 # # ------- 4. sample human label data --------
 # labeled_df_gpt4omini <- merge(labeled_df_gpt4omini, labeled_df_llama8b[,c("sm_id","text_w_eos")])
