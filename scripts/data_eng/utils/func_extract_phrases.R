@@ -21,12 +21,12 @@ func_extract_phrases <- function(answer_string, query_topics, raw_text){
   answer_string <- gsub("Total time: \\d+(.*?)\\d+ sec.", "", answer_string)
   answer_string <- gsub("\\n ", "\\\n", answer_string)
   answer_string <- paste0(answer_string, "\n") # add a \n
-  
+  raw_text <- tolower(raw_text)
   
   res <- list()
   for (i in seq_along(query_topics)) {
     
-    topic <- query_topics[i]
+    topic <- tolower(query_topics[i])
     res[[topic]] <- list()
     res[[topic]][['label']] <- NA
     res[[topic]][['phrases']] <- list()
@@ -107,7 +107,7 @@ get_result_df <- function(answer_df, query_topics) {
     res_list <- list()
     raw_text <- answer_df[answer_df$sm_id==sm_id,"text_w_eos"]
     answer_string <- answer_df[answer_df$sm_id==sm_id,"answer_string"]
-    res_list[[sm_id]] <- func_extract_phrases(answer_string, query_topics, raw_text )
+    res_list[[sm_id]] <- func_extract_phrases(answer_string, query_topics, raw_text)
     
     
     # return(res_list)
@@ -129,6 +129,12 @@ get_result_df <- function(answer_df, query_topics) {
   topic_res <- t(mclapply(answer_df$sm_id, process_row, mc.cores = detectCores() - 2))
   # Bind the result to the original answer_df
   answer_df[c(query_topics,paste0(query_topics,"_phrases"))] <- do.call(rbind, topic_res)
+  
+  # correct label for phrases reasoning
+  for(topic in fea_df$fea){
+    answer_df[which(answer_df[,paste0(topic,"_phrases")] == ""),topic] <- 0
+    answer_df[,topic] <- as.numeric(answer_df[,topic])
+  }
   
   return(answer_df)
 }

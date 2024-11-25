@@ -1,17 +1,12 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 rm(list=ls())
 
-source("./scripts/data_eng/prepare_analysis.R")
-info_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)  %>% select(sm_id, group, sr_name, url)
-human_df <- read.csv("./human_data/sampled_posts.csv")
-label_true <- label_df_gpt4o[which(label_df_gpt4o$sm_id %in% human_df$sm_id),]
+source("./scripts/data_eng/prepare_analysis2.R")
+label_true <- read.csv("./data2/answer_df_raw.csv")
 bal <- F
+mean(label_true$stigma) # 0.75
 
 # --- individual evals ---
-eval_mini <- eval_llm(label_df_mini, label_true, bal)
-eval_mini$llm <- "gpt4omini_label"
-eval_mini_s <- eval_llm(score_df_mini, label_true, bal)
-eval_mini_s$llm <- "gpt4omini_score"
 eval_llama <- eval_llm(label_df_llama, label_true, bal)
 eval_llama$llm <- "llama_label"
 eval_llama_s <- eval_llm(score_df_llama, label_true, bal)
@@ -20,10 +15,6 @@ eval_qwen <- eval_llm(label_df_qwen, label_true, bal)
 eval_qwen$llm <- "qwen_label"
 eval_qwen_s <- eval_llm(score_df_qwen, label_true, bal)
 eval_qwen_s$llm <- "qwen_score"
-eval_vicuna13b <- eval_llm(label_df_vicuna13b, label_true, bal)
-eval_vicuna13b$llm <- "vicuna13b_label"
-eval_vicuna13b_s <- eval_llm(score_df_vicuna13b, label_true, bal)
-eval_vicuna13b_s$llm <- "vicuna13b_score"
 eval_vicuna7b <- eval_llm(label_df_vicuna7b, label_true, bal)
 eval_vicuna7b$llm <- "vicuna7b_label"
 eval_vicuna7b_s <- eval_llm(score_df_vicuna7b, label_true, bal)
@@ -35,41 +26,36 @@ eval_mistral_s$llm <- "mistral_score"
 
 eval_ind_ls <- list("llama" = list("score" = eval_llama_s,
                                    "label" = eval_llama),
-                    "mini" = list("score" = eval_mini_s,
-                                  "label" = eval_mini),
                     "qwen" = list("score" = eval_qwen_s,
                                   "label" = eval_qwen),
                     "mistral" = list("score" = eval_mistral_s,
                                      "label" = eval_mistral),
                     "vicuna7b" = list("score" = eval_vicuna7b_s,
-                                      "label" = eval_vicuna7b)#,
-                    # "vicuna13b" = list("score" = eval_vicuna13b_s,
-                    #                    "label" = eval_vicuna13b) 
-                    )
+                                      "label" = eval_vicuna7b)
+)
 
-
+# label_df_llama$stigma <- rbinom(1368, size = 1, prob = 0.97)
+# label_df_mistral$stigma <- rbinom(1368, size = 1, prob = 0.95)
+# label_df_vicuna7b$stigma <- rbinom(1368, size = 1, prob = 0.95)
+# label_df_qwen$stigma <-  rbinom(1368, size = 1, prob = 0.05)
 llm_full_list <- list("llama" = list("label_df" = label_df_llama,
                                      "score_df" = score_df_llama),
-                      "mini" = list("label_df" = label_df_mini,
-                                    "score_df" = score_df_mini),
                       "qwen" = list("label_df" = label_df_qwen,
                                     "score_df" = score_df_qwen),
                       "mistral" = list("label_df" = label_df_mistral,
                                        "score_df" = score_df_mistral),
                       "vicuna7b" = list("label_df" = label_df_vicuna7b,
-                                        "score_df" = score_df_vicuna7b)#,
-                      # "vicuna13b" = list("label_df" = label_df_vicuna13b,
-                      #                    "score_df" = score_df_vicuna13b)
-                      )
+                                        "score_df" = score_df_vicuna7b)
+)
 # create all combination of c(1,2,3,4,5,6) that has at least 2 elements
-vec <- c(1, 2, 3, 4, 5)
+vec <- c(1, 2, 3, 4)
 combinations_at_least_two <- lapply(2:length(vec), function(k) combn(vec, k, simplify = FALSE))
 combinations_at_least_two <- unlist(combinations_at_least_two, recursive = FALSE)
 
 true_set <- ifelse(nrow(label_true)<2000, "human", "gpt4o")
 agree_ratio_inter <- 0.5 # at least half
 # agree_ratio_inter <- 0.35 # at least 2
-res_filename <- paste0("./res/1/ensemble_label_comb_",agree_ratio_inter,"_",true_set,".RData") 
+res_filename <- paste0("./res2/ensemble_label_comb_",agree_ratio_inter,"_",true_set,".RData") 
 if(!file.exists(res_filename)){
   library(doParallel)
   library(foreach)
@@ -91,12 +77,16 @@ if(!file.exists(res_filename)){
     .packages = c("dplyr"),   # Include required packages
     .options.snow = opts
   ) %dopar% {
+    
+    
     cb <- combinations_at_least_two[[k]]
     llm_list <- llm_full_list[cb]
     
+    
+    fea_df <- read.csv("./data2/fea_df.csv") # use full features
     # ---- ensemble score by PCA ----
-    score_df_pca <- score_df_gpt4o  # Initiation
-    for (topic in fea_df$fea) {
+    score_df_pca <- score_df_llama  # Initiation
+    for (topic in fea_df$fea) { # 
       pca_df <- NULL
       for (llm_name in names(llm_list)) {
         llm_dfs <- llm_list[[llm_name]]
@@ -117,33 +107,57 @@ if(!file.exists(res_filename)){
       pca_df$pca1 <- pca_result$x[, 1]
       
       # Correction for the sign
-      if (cor(pca_df$pca1, score_df_gpt4o[, topic]) < 0) {
+      if (cor(pca_df$pca1, score_df_llama[, topic]) < 0) {
         pca_df$pca1 <- -pca_df$pca1
       }
       score_df_pca[, topic] <- (pca_df$pca1 - min(pca_df$pca1)) / (max(pca_df$pca1) - min(pca_df$pca1))
     }
-    
-    # ---- ensemble agreement label df ----
+    # ---- ensemble agreement label df for category labels ----
     label_df_list <- list()
     for (llm_name in names(llm_list)) {
       label_df_list[[llm_name]] <- llm_list[[llm_name]]$label_df
     }
-    
     agree_ratio <- 0.1
     label_df_ls <- get_label_agreed_by_dfs(label_df_list, agree_ratio)
-    label_df_agreed_union <- merge(label_df_ls$agreed, info_df, by = "sm_id", all.x = TRUE)
+    label_df_agreed_union <- label_df_ls$agreed
+    label_df_agreed_union$stigma <- ifelse(rowSums(label_df_agreed_union[,fea_df$fea])>0,1,0)
     label_df_ls <- get_label_agreed_by_dfs(label_df_list, agree_ratio_inter)
-    label_df_agreed_inter <- merge(label_df_ls$agreed, info_df, by = "sm_id", all.x = TRUE)
-    
-    # Find thresholds
+    label_df_agreed_inter <- label_df_ls$agreed
+    label_df_agreed_inter$stigma <- ifelse(rowSums(label_df_agreed_inter[,fea_df$fea])>0,1,0)
     t_df <- explore_thresholds(
       label_df_agreed_union,
       score_df_pca,
       fea_df,
       label_df_agreed_inter
     )
+    threshold_df <- t_df %>%
+      group_by(topic) %>%
+      summarise(threshold = t[which(f1_score == max(f1_score))][1])
+    threshold_df$fea <- threshold_df$topic
+    threshold_df <- as.data.frame(threshold_df)
+    threshold_df <- merge(threshold_df, fea_df, by = "fea")
+    adjust_label_df_feas <- adjust_label_by_threshold_score(
+      label_df_agreed_union,
+      score_df_pca,
+      threshold_df
+    )
     
-    # Adjust union label based on threshold
+    # ---- ensemble final label ----
+    adjust_label_df <- adjust_label_df_feas
+    adjust_label_df$stigma <- ifelse(rowSums(adjust_label_df[,fea_df$fea])>0,1,0)
+    fea_df <- data.frame("fea" = "stigma", "description" = NA)
+    label_df_ls <- get_label_agreed_by_dfs(list(label_df_agreed_union, 
+                                                adjust_label_df), 0.1)
+    label_df_agreed_union <- label_df_ls$agreed
+    label_df_ls <- get_label_agreed_by_dfs(list(label_df_agreed_inter, 
+                                                adjust_label_df), 0.7)
+    label_df_agreed_inter <- label_df_ls$agreed
+    t_df <- explore_thresholds(
+      label_df_agreed_union,
+      score_df_pca,
+      fea_df,
+      label_df_agreed_inter
+    )
     threshold_df <- t_df %>%
       group_by(topic) %>%
       summarise(threshold = t[which(f1_score == max(f1_score))][1])
@@ -156,6 +170,8 @@ if(!file.exists(res_filename)){
       threshold_df
     )
     
+    
+    
     # ---- Evaluation ----
     eval_pca = eval_llm(score_df_pca, label_true, bal)
     eval_pca$llms <- paste0(names(llm_list), collapse = "; ")
@@ -166,7 +182,7 @@ if(!file.exists(res_filename)){
     eval_agree_i = eval_llm(label_df_agreed_inter, label_true, bal)
     eval_agree_i$llms <- paste0(names(llm_list), collapse = "; ")
     eval_agree_i$llm <- paste0("inter_label (",length(cb)," llms)")
-    eval_agree_adj = eval_llm(adjust_label_df, label_true, bal)
+    eval_agree_adj <- eval_llm(adjust_label_df, label_true, bal)
     eval_agree_adj$llms <- paste0(names(llm_list), collapse = "; ")
     eval_agree_adj$llm <- paste0("pca_label (",length(cb)," llms)")
     
@@ -239,81 +255,33 @@ if(!file.exists(res_filename)){
   eval_agree_i <- lapply(results, `[[`, "eval_agree_i")
   eval_agree_adj <- lapply(results, `[[`, "eval_agree_adj")
   eval_agree_adj_delta <- lapply(results, `[[`, "eval_agree_adj_delta")
-  save(eval_pca, eval_pca_delta, eval_agree_u, eval_agree_i, eval_agree_adj, eval_agree_adj_delta,
-       file = res_filename)
+  # save(eval_pca, eval_pca_delta, eval_agree_u, eval_agree_i, eval_agree_adj, eval_agree_adj_delta,
+  #      file = res_filename)
 }else{
   load(res_filename)
 }
 
 
-# summary_eval_df <- function(eval_ls){
-#   eval_df_sum <- do.call(rbind, eval_ls)
-#   eval_df_sum_summary <- eval_df_sum %>%
-#     group_by(llm, topic) %>%
-#     summarise(
-#       across(c("auprc", "f1_score", "fb_score", "sensitivity", "precision", "specificity"), list(
-#         median = ~median(., na.rm=T),
-#         q25 = ~quantile(., 0.25, na.rm=T),
-#         q75 = ~quantile(., 0.75, na.rm=T),
-#         min = ~min(., na.rm=T),
-#         max = ~max(., na.rm=T)
-#       ), .names = "{.col}_{.fn}")
-#     ) %>%
-#     mutate(across(everything(), ~ ifelse(is.infinite(.), NA, .)))
-#   eval_df_sum_final <- data.frame()
-#   for(sub in c("_median", "_q25", "_q75", "_min", "_max")){
-#     eval_df_sum_sub <- eval_df_sum_summary[,c("llm","topic",colnames(eval_df_sum_summary)[grepl(sub, colnames(eval_df_sum_summary))])]
-#     colnames(eval_df_sum_sub) <- gsub(sub,"",colnames(eval_df_sum_sub))
-#     eval_df_sum_sub$llm <- paste0(eval_df_sum_sub$llm, sub)
-#     eval_df_sum_final <- bind_rows(eval_df_sum_final, eval_df_sum_sub)
-#   }
-#   eval_df_sum_final <- eval_df_sum_final[,intersect(colnames(eval_df_sum_final), colnames(eval_mini))]
-#   return(eval_df_sum_final)
-# }
-# # ----- 1. pca score -----
-# eval_df_pca_final <- summary_eval_df(eval_pca)
-# # ----- 2. pca label -----
-# eval_df_agree_adj <- summary_eval_df(eval_agree_adj)
-# eval_df <- rbind(eval_df_agree_adj[which(grepl("median", eval_df_agree_adj$llm)),], 
-#                  eval_df_pca_final[which(grepl("median", eval_df_pca_final$llm)),], 
-#                  eval_mini, eval_mini_s, 
-#                  eval_llama, eval_llama_s,
-#                  eval_qwen, eval_qwen_s,
-#                  eval_vicuna13b, eval_vicuna13b_s,
-#                  eval_vicuna7b, eval_vicuna7b_s,
-#                  eval_mistral, eval_mistral_s) 
-# eval_df$llm <- gsub("_median", "", eval_df$llm)
-# eval_df_q25 <- rbind(eval_df_agree_adj[which(grepl("_q25", eval_df_agree_adj$llm)),], 
-#                   eval_df_pca_final[which(grepl("_q25", eval_df_pca_final$llm)),])
-# eval_df_q25$llm <- gsub("_q25", "", eval_df_q25$llm)
-
-
 # ---- plot eval ----
 color_scale <- c(
   # Warm colors (gradient from dark red to orange)
-  "Ensemble (5 LLMs)" = "red3", # Dark Red
-  "Ensemble (4 LLMs)" = "#FF6347", # Firebrick
-  "Ensemble (3 LLMs)" = "#FFA500", # Orange-Red
-  "Ensemble (2 LLMs)" = "#FEE08B", # Tomato
-  # "ensemble (2 llms)" = "#D9EF8B", # Orange
+  "ensemble (4 llms)" = "#FF6347", # Firebrick
+  "ensemble (3 llms)" = "#FFA500", # Orange-Red
+  "ensemble (2 llms)" = "#FEE08B", # Tomato
   # Distinct cold colors for individual models
-  "GPT-4omini" = "pink2",
-  "Llama-3.1-8B-Instruct" = "green3",
-  "Qwen2.5-7B-Instruct" = "steelblue2",
-  "Mistral-7B-Instruct-v0.3" = "green4",
-  "vicuna-13b" = "lightblue1",
-  "vicuna-7b-v1.5" = "purple1"
+  "llama-8b" = "green3",
+  "qwen-7b" = "steelblue2",
+  "mistral-7b" = "green4",
+  "vicuna-7b" = "purple1"
 )
 
-rm_topics <- c("fearcarb")#c("fearfood", "feargain")
+rm_topics <- c()#c("fearfood", "feargain")
 eval_df_pca_final <- do.call(rbind, eval_pca)
 eval_df_agree_adj <- do.call(rbind, eval_agree_adj)
-eval_df <- rbind(eval_df_agree_adj[,intersect(colnames(eval_df_agree_adj), colnames(eval_mini))],
-                 eval_df_pca_final[,intersect(colnames(eval_df_pca_final), colnames(eval_mini))],
-                 eval_mini, eval_mini_s,
+eval_df <- rbind(eval_df_agree_adj[,intersect(colnames(eval_df_agree_adj), colnames(eval_llama))],
+                 eval_df_pca_final[,intersect(colnames(eval_df_pca_final), colnames(eval_llama))],
                  eval_llama, eval_llama_s,
                  eval_qwen, eval_qwen_s,
-                 # eval_vicuna13b, eval_vicuna13b_s,
                  eval_vicuna7b, eval_vicuna7b_s,
                  eval_mistral, eval_mistral_s)
 plot_evaluation <- function(eval_df, varname = "f1_score"){
@@ -369,18 +337,18 @@ plot_evaluation <- function(eval_df, varname = "f1_score"){
                                              "vicuna7b_label"))
     
   }
-  levels(eval_df_summary$llm) <- c("Ensemble (6 LLMs)",
-                                   "Ensemble (5 LLMs)",
-                                   "Ensemble (4 LLMs)",
-                                   "Ensemble (3 LLMs)",
-                                   "Ensemble (2 LLMs)",
-                                   "GPT-4omini",
-                                   "Llama-3.1-8B-Instruct",
-                                   "Qwen2.5-7B-Instruct",
-                                   "Mistral-7B-Instruct-v0.3",
+  levels(eval_df_summary$llm) <- c("ensemble (6 llms)",
+                                   "ensemble (5 llms)",
+                                   "ensemble (4 llms)",
+                                   "ensemble (3 llms)",
+                                   "ensemble (2 llms)",
+                                   "gpt-4omini",
+                                   "llama-8b",
+                                   "qwen-7b",
+                                   "mistral-7b",
                                    "vicuna-13b",
-                                   "vicuna-7b-v1.5")
-  eval_df_summary[which(!grepl("Ensemble",eval_df_summary$llm)),c("y_low", "y_q25","y_q75","y_up")] <- NA
+                                   "vicuna-7b")
+  eval_df_summary[which(!grepl("ensemble",eval_df_summary$llm)),c("y_low", "y_q25","y_q75","y_up")] <- NA
   # eval_df_summary <- eval_df_summary[which(!eval_df_summary$llm %in% c("ensemble (6 llms)",
   #                                                                      "ensemble (2 llms)")),]
   
@@ -405,23 +373,19 @@ plot_evaluation <- function(eval_df, varname = "f1_score"){
       legend.key.size = unit(0.5, "cm"),
       legend.text = element_text(size = 8)
     ) +
-    labs(x = NULL, y = varname, fill=NULL, color=NULL)
+    labs(x = NULL, y = varname) + ylim(0,1)
   
   return(p)
 }
 eval_df  <- eval_df[which(!eval_df$topic%in%rm_topics),]
-p0 <- plot_evaluation(eval_df, "auprc")+ ylab("AUPRC\n(by score)")
-p1 <- plot_evaluation(eval_df, "f1_score") + ylab("F1-score\n")
-p2 <- plot_evaluation(eval_df, "precision") + ylab("Precision\n")
-p3 <- plot_evaluation(eval_df, "specificity") + ylab("Specificity\n")
-p4 <- plot_evaluation(eval_df, "sensitivity") + ylab("Sensitivity\n")
-p_eval_ls <- list(p0,p1,p2,p3,p4)
-p_eval <- ggarrange(p0,p1,p2,p3,p4, ncol=1, common.legend = T, legend = "right")
+p1 <- plot_evaluation(eval_df, "f1_score") 
+p2 <- plot_evaluation(eval_df, "precision")
+p3 <- plot_evaluation(eval_df, "sensitivity")
+p4 <- plot_evaluation(eval_df, "auprc")+ ylab("auprc (by score)")
+p_eval <- ggarrange(p4, p1,p2,p3, ncol=1, common.legend = T, legend = "right")
 p_eval <- annotate_figure(
   p_eval,
-  top = text_grob("A. ED and Dieting Reddit Posts\n", 
-                  size = 10, #face = "bold", 
-                  hjust=0, x=0)
+  top = text_grob("Performance Evaluation", size = 12, face = "bold", hjust=0, x=0)
 )
 
 # ---- plot improvement ----
@@ -443,11 +407,11 @@ plot_improve <- function(eval_df_delta, ename = "f1_score"){
                                            "pca_label (3 llms)",
                                            "pca_label (2 llms)"))
   }
-  levels(eval_df_delta$llm) <- c("Ensemble (6 LLMs)",
-                                 "Ensemble (5 LLMs)",
-                                 "Ensemble (4 LLMs)",
-                                 "Ensemble (3 LLMs)",
-                                 "Ensemble (2 LLMs)")
+  levels(eval_df_delta$llm) <- c("ensemble (6 llms)",
+                                 "ensemble (5 llms)",
+                                 "ensemble (4 llms)",
+                                 "ensemble (3 llms)",
+                                 "ensemble (2 llms)")
   # eval_df_delta <- eval_df_delta[which(!eval_df_delta$llm %in% c("ensemble (6 llms)",
   #                                                                "ensemble (2 llms)")),]
   
@@ -460,7 +424,7 @@ plot_improve <- function(eval_df_delta, ename = "f1_score"){
       legend.key.size = unit(0.5, "cm"),
       legend.text = element_text(size = 8)
     ) + scale_fill_manual(values = color_scale) + scale_color_manual(values = color_scale) +
-    labs(x = NULL, y = ename, fill=NULL, color=NULL)
+    labs(x = NULL, y = ename)
   return(p)
 }
 eval_df_pca_delta <- do.call(rbind, eval_pca_delta)
@@ -469,19 +433,15 @@ eval_df_agree_adj_delta <- do.call(rbind, eval_agree_adj_delta)
 eval_df_pca_delta  <- eval_df_pca_delta[which(!eval_df_pca_delta$topic%in%rm_topics),]
 eval_df_agree_adj_delta  <- eval_df_agree_adj_delta[which(!eval_df_agree_adj_delta$topic%in%rm_topics),]
 
-p1 <- plot_improve(eval_df_pca_delta, "auprc") + ylab("AUPRC\n(by score)")
-p2 <- plot_improve(eval_df_agree_adj_delta, "f1_score") + ylab("F1-score")
-p3 <- plot_improve(eval_df_agree_adj_delta, "precision") + ylab("Precision")
-p4 <- plot_improve(eval_df_agree_adj_delta, "specificity") + ylab("Specificity")
-p5 <- plot_improve(eval_df_agree_adj_delta, "sensitivity") + ylab("Sensitivity")
-p_improve_ls <- list(p1,p2,p3,p4,p5)
-p_improve <- ggarrange(p1, p2, p3, p4, p5, ncol=1, common.legend = T, legend = "right")
+p1 <- plot_improve(eval_df_pca_delta, "auprc") + ylab("auprc (by score)")
+p2 <- plot_improve(eval_df_agree_adj_delta, "f1_score")
+p3 <- plot_improve(eval_df_agree_adj_delta, "precision")
+p4 <- plot_improve(eval_df_agree_adj_delta, "sensitivity")
+p_improve <- ggarrange(p1, p2, p3, p4, ncol=1, common.legend = T, legend = "right")
 # add text "Performance Increase" on the top of p_improve
 p_improve <- annotate_figure(
   p_improve,
-  top = text_grob("A. ED and Dieting Reddit Posts\n", 
-                  size = 10, #face = "bold", 
-                  hjust=0, x=0)
+  top = text_grob("Performance Increase", size = 12, face = "bold", hjust=0, x=0)
 )
-save(p_eval, p_eval_ls, p_improve, p_improve_ls, file = paste0("./res/eval_plots_",true_set,"_A.RDS"))
-ggarrange(p_eval, p_improve, nrow=1) %>% ggsave(filename = paste0("./res/1/",true_set,"_evaluation.png"), width = 14, height = 7, bg="white")
+
+ggarrange(p_eval, p_improve, nrow=1) %>% ggsave(filename = paste0("./res2/",true_set,"_evaluation.png"), width = 8, height = 8, bg="white")
