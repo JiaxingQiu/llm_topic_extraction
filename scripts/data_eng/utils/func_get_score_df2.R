@@ -18,9 +18,9 @@ get_score_df2 <- function(llm_name,
   # score_cut = median(cos_v)
   # par(mfrow=c(4,5))
   for(topic in fea_df$fea){
-    # correct label for phrases reasoning
-    labeled_df[which(labeled_df[,paste0(topic,"_phrases")] == ""),topic] <- 0
-    labeled_df[,topic] <- as.numeric(labeled_df[,topic])
+    # # correct label for phrases reasoning
+    # labeled_df[which(labeled_df[,paste0(topic,"_phrases")] == ""),topic] <- 0
+    # labeled_df[,topic] <- as.numeric(labeled_df[,topic])
     
     # hist(scores_df[[topic]])
     # shift a cutoff at 0, then zero out <0
@@ -46,7 +46,22 @@ get_score_df2 <- function(llm_name,
     scores_df$stigma <-scores_df$weightstigma
   }else{
     labeled_df$stigma <- ifelse(rowSums(labeled_df[,fea_df$fea])>0,1,0)
-    scores_df$stigma <- apply(scores_df[, fea_df$fea], 1, max, na.rm=T)
+    scores_df$stigma <- apply(scores_df[, fea_df$fea], 1, mean, na.rm=T)
+    
+    # pca_result <- prcomp(scores_df[, fea_df$fea], center = TRUE, scale. = TRUE)
+    # scores_df$pca1 <- pca_result$x[, 1]
+    # if (cor(scores_df$pca1 , scores_df[, "weightstigma"]) < 0) {
+    #   scores_df$pca1 <- -scores_df$pca1
+    # }
+    # scores_df$stigma <- (scores_df$pca1 - min(scores_df$pca1)) / (max(scores_df$pca1) - min(scores_df$pca1))
+    
+    # -- try rankit --
+    # for(t in fea_df$fea){
+    #   scores_df[,t] <- rankit(scores_df[,t])
+    #   # hist(scores_df[,t], main = t)
+    # }
+    # scores_df$stigma <- apply(scores_df[, fea_df$fea], 1, mean, na.rm=T)
+    
   }
   
   # remove (provided in rm_feas)

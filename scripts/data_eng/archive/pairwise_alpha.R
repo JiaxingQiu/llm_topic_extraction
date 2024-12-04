@@ -14,6 +14,7 @@ for(topic in c("stigma")){
                      "mistral" = label_df_mistral[[topic]],
                      "qwen" = label_df_qwen[[topic]],
                      "vicuna" = label_df_vicuna7b[[topic]])
+  data[data==0] <- 2
   data <- as.matrix(data)
   # get pairwise alpha in a matrix (upper tri only)
   res_mat <- matrix(nrow=ncol(data), ncol=ncol(data))
@@ -32,9 +33,6 @@ for(topic in c("stigma")){
 
 # Print results for inspection
 print(rm_ls)
-
-
-
 #  Generate heatmap using pheatmap
 pheatmap(as.matrix(res_mat), 
          main = "Pairwise Krippendorff's Alpha", 
@@ -43,24 +41,3 @@ pheatmap(as.matrix(res_mat),
          clustering_method = "complete",
          color = colorRampPalette(c("blue", "white", "red"))(100),  # Blue to red color palette
          display_numbers = TRUE) 
-
-# Assuming `res_mat` is the result matrix for the topic "stigma"
-threshold <- 0.005
-disagreement_count <- rep(0, ncol(res_mat))
-average_alpha <- rowMeans(res_mat, na.rm = TRUE)  # calculates the average ignoring NA values
-
-for(i in 1:ncol(res_mat)) {
-  for(j in 1:ncol(res_mat)) {
-    if(i != j && res_mat[i, j] < threshold) {
-      disagreement_count[i] <- disagreement_count[i] + 1
-    }
-  }
-}
-# Combine the results into a data frame
-coder_stats <- data.frame(coder = colnames(res_mat), average_alpha, disagreement_count)
-
-# Sort by disagreement count and average_alpha to see which coders disagree most
-coder_stats <- coder_stats[order(coder_stats$disagreement_count, decreasing = TRUE), ]
-
-# Print coder stats
-print(coder_stats)

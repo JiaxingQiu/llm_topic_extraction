@@ -15,6 +15,16 @@ adjust_label_by_threshold_score <- function(label_df,
   return(label_df_adjust)
 }
 
+adjust_score_by_threshold_score <- function(score_df,
+                                            threshold_df){
+  score_df_adjust <- score_df
+  for(topic in threshold_df$fea){
+    threshold <- threshold_df$threshold[which(threshold_df$fea==topic)]
+    score_df_adjust[which(score_df[[topic]]<threshold),topic]<-0
+  }
+  return(score_df_adjust)
+}
+
 
 
 explore_thresholds <- function(label_df, 

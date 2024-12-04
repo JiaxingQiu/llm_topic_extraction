@@ -16,22 +16,24 @@ data <- read_excel("./data2/raw/stigma.xlsx")
 
 
 #coding_cat <- paste0(unique(data$`Coding Category`),collapse = ";")
-fea <- tolower(c("WeightBasedHealth",
-         "WeightStigma",
-         "WeightBasedHealthcare",
-         "EncourageWeightLoss",
-         "DietPromotion",
-         "Thinness",
-         "NotLowWeightEnough",
-         "WeightBlame",
-         "WeightValue"))
-description <- c("Judgments about health based on weight or appearance",
-                 "Negative attitudes, discrimination, or prejudice based on body weight or size",
-                 "Healthcare decisions influenced by weight. Not taken seriously because of weight, or inadequate care due to weight",
+fea <- tolower(c("WeightBasedAssumption",
+               "WeightBasedCare",
+               "NotSickEnough",
+               "WeightBasedInadequateCare",
+               "DietPromotion",
+               "EncourageWeightLoss",
+               "ReassureThinness",
+               "WeightStigma",
+               "WeightBlame",
+               "WeightValue"))
+description <- c("Assumptions of health based on appearance or weight",
+                 "Healthcare decisions based on weight. Treatment decision based on weight",
+                 "Not sick enough, or not thin enought, or not low weight enough",
+                 "Not taken seriously because of weight, Inadequate care based on weight",
+                 "Diet promotion",
                  "Encouragement of weight loss",
-                 "Advocacy for diets or restrictive eating",
-                 "Reassurance of thinness. Maintaining thinness",
-                 "Not sick enough, or not thin enought, or not lose weight enough",
+                 "Reassurance of thinness. Reassurance that will not get fat in treatment",
+                 "Negative attitudes, discrimination, or prejudice based on body weight or size",
                  "Weight blamed for health issues or concerns",
                  "Weight tied to personality characteristics")
 fea_df <- data.frame("fea" = fea, "description" = description)

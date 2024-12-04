@@ -17,29 +17,65 @@ fea_df <- read.csv("./data/fea_df.csv")
 
 # ------ 0. human --------
 if(!file.exists("./human_data/results.csv")){
-  # # loop through all csv files under "./gpt_data" folder
-  # folder_path <- "./human_data/"
-  # 
-  # label1 <- read.csv(paste0(folder_path,"sampled_posts_joy.csv"))
-  # label2 <- read.csv(paste0(folder_path,"sampled_posts_sophia.csv"))
-  # 
-  # label1 <- label1[,c("sm_id", "answer_string")]
-  # label2 <- label1[,c("sm_id", "answer_string")]
-  # 
-  # csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
-  # 
-  # csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
-  # answer_df <- lapply(csv_files, read.csv) %>% bind_rows()  
-  # answer_df$answer_string <- answer_df$responses
-  # text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
-  # answer_df <- merge(answer_df, text_df[,c("sm_id", "text_w_eos")], all.x=T)
-  # answer_df <- answer_df[,c("sm_id", "text_w_eos", "answer_string")]
-  # labeled_df_gpt4omini <- get_result_df(answer_df, fea_df$fea)
-  # write.csv(labeled_df_gpt4omini, "./gpt_data/results.csv", row.names = F)
+  
+  library(readxl)
+  df_human1 <- read_excel("./human_data/sampled_posts_joy.xlsx", sheet = "joy")
+  df_human1 <- df_human1 %>% arrange(sm_id)
+  parse_answers <- function(answer_str) {
+    # Extract all key-value pairs using regular expression, ignoring the initial numbering
+    pairs <- str_extract_all(answer_str, "\\(\\d+\\)\\s(\\w+):\\s(\\d)")[[1]]
+    # Split the pairs into topics and values
+    split_pairs <- str_split(pairs, ":\\s")
+    # Convert to a named vector, removing the numbering
+    values <- sapply(split_pairs, function(x) as.integer(x[2]))
+    names(values) <- sapply(split_pairs, function(x) {
+      # Remove the initial numbering from the topic name
+      sub("^\\(\\d+\\)\\s", "", x[1])
+    })
+    return(values)
+  }
+  # Assuming df_human1 has columns 'sm_id', 'text_w_eos', and 'answer_string_human'
+  answer_matrix <- t(apply(df_human1, 1, function(x) parse_answers(x['answer_string_human'])))
+  # Convert the matrix to a dataframe
+  answer_df <- as.data.frame(answer_matrix)
+  labeled_df_human <- cbind(df_human1[c("sm_id", "text_w_eos")], answer_df)
+  labeled_df_human$idealbody <- ifelse(labeled_df_human$thinspo + labeled_df_human$leanbody > 0, 1, 0)
+  labeled_df_human$fearfood <- ifelse(labeled_df_human$fearfood + labeled_df_human$fearcarb > 0, 1, 0)
+  
+  write.csv(labeled_df_human, "./human_data/results.csv", row.names = F)
 }else{
-  # labeled_df_gpt4omini <- read.csv("./gpt_data/results.csv", stringsAsFactors = F)
+  labeled_df_human <- read.csv("./human_data/results.csv", stringsAsFactors = F)
 }
-
+if(!file.exists("./human_data/results2.csv")){
+  
+  library(readxl)
+  df_human2 <- read_excel("./human_data/sampled_posts_dongliang.xlsx", sheet = "dongliang")
+  df_human2 <- df_human2 %>% arrange(sm_id)
+  parse_answers <- function(answer_str) {
+    # Extract all key-value pairs using regular expression, ignoring the initial numbering
+    pairs <- str_extract_all(answer_str, "\\(\\d+\\)\\s(\\w+):\\s(\\d)")[[1]]
+    # Split the pairs into topics and values
+    split_pairs <- str_split(pairs, ":\\s")
+    # Convert to a named vector, removing the numbering
+    values <- sapply(split_pairs, function(x) as.integer(x[2]))
+    names(values) <- sapply(split_pairs, function(x) {
+      # Remove the initial numbering from the topic name
+      sub("^\\(\\d+\\)\\s", "", x[1])
+    })
+    return(values)
+  }
+  # Assuming df_human1 has columns 'sm_id', 'text_w_eos', and 'answer_string_human'
+  answer_matrix <- t(apply(df_human2, 1, function(x) parse_answers(x['answer_string_human'])))
+  # Convert the matrix to a dataframe
+  answer_df <- as.data.frame(answer_matrix)
+  labeled_df_human <- cbind(df_human2[c("sm_id", "text_w_eos")], answer_df)
+  labeled_df_human$idealbody <- ifelse(labeled_df_human$thinspo + labeled_df_human$leanbody > 0, 1, 0)
+  labeled_df_human$fearfood <- ifelse(labeled_df_human$fearfood + labeled_df_human$fearcarb > 0, 1, 0)
+  
+  write.csv(labeled_df_human, "./human_data/results2.csv", row.names = F)
+}else{
+  labeled_df_human2 <- read.csv("./human_data/results2.csv", stringsAsFactors = F)
+}
 
 
 # ------ 1. GPT 4o mini --------

@@ -1,5 +1,5 @@
 get_score_df <- function(folder, mdl_name = "all-mpnet-base-v2",
-                         rm_feas = c("fearcarb")){ # c("feargain", "fearcarb", "feargain")
+                         rm_feas = c("fearcarb", "leanbody", "thinspo", "nosocialeat", "meal")){ # c("feargain", "fearcarb", "feargain")
   orgwd <- getwd()
   setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
   library(dplyr)
@@ -36,6 +36,9 @@ get_score_df <- function(folder, mdl_name = "all-mpnet-base-v2",
   
   text_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)
   info_df <- text_df %>% select(sm_id, group, sr_name, url)
+  info_df$group[which(info_df$group == "ed")] <- "ED"
+  info_df$group[which(info_df$group == "diet")] <- "Dietary"
+  info_df$group[which(info_df$group == "fitness")] <- "Fitness"
   labeled_df <- merge(labeled_df[,c("sm_id",setdiff(colnames(labeled_df), colnames(info_df)))], info_df) %>% arrange(sm_id)
   scores_df <- merge(scores_df[,c("sm_id",setdiff(colnames(scores_df), colnames(info_df)))], info_df) %>% arrange(sm_id)
   
@@ -44,13 +47,13 @@ get_score_df <- function(folder, mdl_name = "all-mpnet-base-v2",
   
   # ---- special engineering ---- 
   # lump thinspo and leanbody
-  labeled_df$thinspo <- ifelse(labeled_df$thinspo + labeled_df$leanbody > 0, 1, 0)
-  scores_df$thinspo <- ifelse(scores_df$thinspo >= scores_df$leanbody, scores_df$thinspo, scores_df$leanbody)
+  labeled_df$idealbody <- ifelse(labeled_df$thinspo + labeled_df$leanbody > 0, 1, 0)
+  scores_df$idealbody <- ifelse(scores_df$thinspo >= scores_df$leanbody, scores_df$thinspo, scores_df$leanbody)
   # lump fearfood, fearcarb
   labeled_df$fearfood <- ifelse(labeled_df$fearfood + labeled_df$fearcarb > 0, 1, 0)
   scores_df$fearfood <- ifelse(scores_df$fearfood >= scores_df$fearcarb, scores_df$fearfood, scores_df$fearcarb)
   
-  # remove feargain, fearcarb, fearfood (provided in rm_feas)
+  # remove (provided in rm_feas)
   labeled_df <- labeled_df[,setdiff(colnames(labeled_df), rm_feas)]
   scores_df <- scores_df[,setdiff(colnames(scores_df), rm_feas)]
   
