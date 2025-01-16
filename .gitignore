@@ -17,6 +17,7 @@ mistral_data/*
 vicuna7b_data/*
 vicuna13b_data/*
 res/*
+res copy/*
 
 __pycache__/*
 
