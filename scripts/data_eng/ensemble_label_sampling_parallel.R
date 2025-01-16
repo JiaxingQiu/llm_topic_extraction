@@ -3,9 +3,9 @@ rm(list=ls())
 
 source("./scripts/data_eng/prepare_analysis.R")
 info_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)  %>% select(sm_id, group, sr_name, url)
-# label_true <- read.csv("./human_data/results.csv")
+label_true <- read.csv("./human_data/results.csv")
 # human_df <- read.csv("./human_data/sampled_posts.csv")
-label_true <- label_df_gpt4o
+# label_true <- label_df_gpt4o
 bal <- F
 rm_ls <- readRDS("./res/1/outliers.RDS")
 
@@ -157,8 +157,8 @@ if(!file.exists(res_filename)){
   eval_agree_adj_delta[[length(eval_pca)+1]] <- eval_agree_adj_delta_opt
   fea_df <- fea_df_full
   
-  save(eval_pca, eval_pca_delta, eval_agree_u, eval_agree_i, eval_agree_adj, eval_agree_adj_delta,
-       file = res_filename)
+  # save(eval_pca, eval_pca_delta, eval_agree_u, eval_agree_i, eval_agree_adj, eval_agree_adj_delta,
+  #      file = res_filename)
 }else{
   load(res_filename)
 }

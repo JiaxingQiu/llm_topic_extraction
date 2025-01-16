@@ -1,6 +1,6 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
 rm(list=ls())
-
+library(tidyr)
 source("./scripts/data_eng/prepare_analysis.R")
 info_df <- read.csv("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/ED Media/network/script/llm/sm_eos.csv", stringsAsFactors = FALSE)  %>% select(sm_id, group, sr_name, url)
 info_df$group <- ifelse(tolower(info_df$group) == "ed", "ED", "Dieting")
@@ -39,7 +39,7 @@ if(!"group" %in% colnames(label_df_gpt4o)){
 }
 load("./res/1/ensemble_dfs.RData")
 label_ens <- merge(ens_obj$label, info_df, by="sm_id",all.x=T)
-score_ens <- merge(ens_obj$score, info_df, by="sm_id",all.x=T)
+score_ens <- merge(ens_obj$score_adj, info_df, by="sm_id",all.x=T)
 
 
 

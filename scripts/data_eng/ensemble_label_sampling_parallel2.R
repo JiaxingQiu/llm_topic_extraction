@@ -2,10 +2,28 @@ setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction
 rm(list=ls())
 
 source("./scripts/data_eng/prepare_analysis2.R")
-label_true <- read.csv("./data2/answer_df_raw.csv")
+# # get human annotation
+# label_true <- read.csv("./data2/answer_df_raw.csv")
+data <- read_excel("./data2/raw/coders2.xlsx")
+# remove rows
+# remove rows
+data$pat_id <- as.numeric(data$record_id)
+data$coder3 <- ifelse(as.numeric(data$`Weight Stigma? Natalie`)==1,1,0)
+data$coder1 <- ifelse(tolower(data$`Weight Stigma? Noelle`)=="yes",1,0)
+# data$stigma <- ifelse(rowSums(data[,c("coder1","coder3")], na.rm=T)>0,1,0)
+# data$stigma <- data$coder1 
+# data$stigma <- data$coder3
+data$stigma[which(is.na(data$stigma))] <- data$coder1[which(is.na(data$stigma))]
+data$stigma <- NA
+data$stigma[which(data$coder1==1 & data$coder3==1)] <- 1
+data$stigma[which(data$coder1==0 & data$coder3==0)] <- 0
+rm_sm <- c()#c(878, 902, 920, 930, 950, 985, 1, 10, 23, 348, 406, 437, 438, 447, 485, 605, 611, 620, 629, 1305, 1319, 1345, 157, 169, 562, 657, 701, 1101, 1178, 1186, 1194, 1206)
+label_true <- data[which(!data$sm_id%in%rm_sm),c("sm_id", "pat_id", "stigma")] 
+label_true <- label_true[complete.cases(label_true),]
+mean(label_true$stigma) # 0.75
+
 bal <- F
 rm_ls <- readRDS("./res/2/outliers.RDS")
-table(label_true$stigma) # 0.75
 
 # --- individual evals ---
 eval_llama <- eval_llm(label_df_llama, label_true, bal)

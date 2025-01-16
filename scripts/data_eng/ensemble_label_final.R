@@ -25,6 +25,7 @@ res_filename <- paste0("./res/1/ensemble_dfs.RData")
 library(dplyr)
 ensemble_label_df <- label_df_llama
 ensemble_score_df <- score_df_llama
+ensemble_score_df_adj <- score_df_llama
 
 fea_df_full <- fea_df
 for(topic in fea_df_full$fea){
@@ -39,9 +40,12 @@ for(topic in fea_df_full$fea){
   opt_res <- ensemble_sample(opt_cb, return_label=T)
   ensemble_label_df[,topic] <- opt_res$ensemble_label[,topic]
   ensemble_score_df[,topic] <- opt_res$ensemble_score[,topic]
+  ensemble_score_df_adj[,topic] <- opt_res$ensemble_score_adj[,topic]
 }
 ensemble_label_df <- ensemble_label_df[,c("sm_id", fea_df_full$fea)]
 ensemble_score_df <- ensemble_score_df[,c("sm_id", fea_df_full$fea)]
+ensemble_score_df_adj <- ensemble_score_df_adj[,c("sm_id", fea_df_full$fea)]
 ens_obj <- list("label" = ensemble_label_df, 
-                "score" = ensemble_score_df)
+                "score" = ensemble_score_df,
+                "score_adj" = ensemble_score_df_adj)
 save(ens_obj, file=res_filename)

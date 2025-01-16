@@ -62,12 +62,13 @@ ensemble_sample <- function(cb, return_label=F){
     score_df_pca,
     threshold_df
   )
-  score_df_pca <- adjust_score_by_threshold_score(score_df_pca,
+  score_df_pca_adj <- adjust_score_by_threshold_score(score_df_pca,
                                                   threshold_df)
   
   if(return_label){
     return(list("ensemble_label" = adjust_label_df,
-                "ensemble_score" = score_df_pca))
+                "ensemble_score" = score_df_pca,
+                "ensemble_score_adj" = score_df_pca_adj))
   }else{
     # ---- Evaluation ----
     eval_pca <- eval_llm(score_df_pca, label_true, bal)

@@ -1,5 +1,7 @@
 setwd("/Users/joyqiu/Documents/Documents JoyQiu Work/Research/LLMTopicExtraction/llm_topic_extraction")
-
+library(dplyr)
+library(kableExtra)
+library(knitr)
 fea_df <- read.csv("./data2/fea_df.csv")
 fea_df$description <- sub("\\.$", "", fea_df$description)
 fea_df$description <- paste0(fea_df$description, ".")

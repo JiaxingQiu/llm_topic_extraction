@@ -10,8 +10,7 @@
 
 - exclude_outliers.R
 
-- ensemble_score.R calculate an adjusted score per topic for each post.
-- ensemble_label.R calculate an adjusted label per topic for each post.
+- ensemble_label_final.R calculate an adjusted label per topic for each post.
 - ensemble_label_sampling_parallel.R
 - ensemble_label_sampling_parallel2.R
 
